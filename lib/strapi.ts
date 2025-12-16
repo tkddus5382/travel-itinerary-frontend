@@ -198,3 +198,50 @@ export function getStrapiMediaUrl(url: string | null): string {
   if (url.startsWith('http')) return url;
   return (process.env.NEXT_PUBLIC_STRAPI_URL || 'http://localhost:1337') + url;
 }
+
+// Reviews
+export interface Review {
+  rating: number;
+  content: string;
+  createdAt: string;
+  user: { data: { id: number; attributes: { username: string; email: string } } };
+  itinerary: { data: StrapiData<Itinerary> };
+  likedBy: { data: Array<{ id: number }> };
+}
+
+export async function getReviewsByItinerary(itineraryId: number, sort: string = 'createdAt:desc'): Promise<StrapiResponse<StrapiData<Review>[]>> {
+  return fetchAPI(`/reviews?filters[itinerary][id][$eq]=${itineraryId}&populate=user,likedBy&sort=${sort}`);
+}
+
+export async function createReview(token: string, data: { rating: number; content: string; itinerary: number; user: number }): Promise<StrapiResponse<StrapiData<Review>>> {
+  return fetchAPI('/reviews', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ data }),
+  });
+}
+
+export async function updateReview(token: string, reviewId: number, likedBy: number[]): Promise<StrapiResponse<StrapiData<Review>>> {
+  return fetchAPI(`/reviews/${reviewId}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      data: {
+        likedBy: likedBy,
+      },
+    }),
+  });
+}
+
+export async function deleteReview(token: string, reviewId: number): Promise<void> {
+  return fetchAPI(`/reviews/${reviewId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+}
