@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { StrapiData, Review, getReviewsByItinerary, createReview, updateReview, deleteReview } from '@/lib/strapi';
+import { StrapiData, Review, getReviewsByItinerary, createReview, updateReview, updateReviewContent, deleteReview } from '@/lib/strapi';
 import ReviewItem from './ReviewItem';
 import ReviewForm from './ReviewForm';
 import Link from 'next/link';
@@ -94,6 +94,17 @@ export default function ReviewList({ itineraryId }: ReviewListProps) {
     }
   };
 
+  const handleUpdate = async (reviewId: number, data: { rating: number; content: string }) => {
+    if (!token) return;
+
+    try {
+      await updateReviewContent(token, reviewId, data);
+      await fetchReviews();
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const handleDelete = async (reviewId: number) => {
     if (!token) return;
 
@@ -179,6 +190,7 @@ export default function ReviewList({ itineraryId }: ReviewListProps) {
               review={review}
               currentUserId={user?.id}
               onLike={handleLike}
+              onUpdate={user?.id === review.attributes.user.data?.id ? handleUpdate : undefined}
               onDelete={user?.id === review.attributes.user.data?.id ? handleDelete : undefined}
             />
           ))}

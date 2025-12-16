@@ -245,3 +245,13 @@ export async function deleteReview(token: string, reviewId: number): Promise<voi
     },
   });
 }
+
+export async function updateReviewContent(token: string, reviewId: number, data: { rating: number; content: string }): Promise<StrapiResponse<StrapiData<Review>>> {
+  return fetchAPI(`/reviews/${reviewId}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ data }),
+  });
+}

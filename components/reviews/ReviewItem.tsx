@@ -8,12 +8,18 @@ interface ReviewItemProps {
   review: StrapiData<Review>;
   currentUserId?: number;
   onLike: (reviewId: number, isLiked: boolean) => Promise<void>;
+  onUpdate?: (reviewId: number, data: { rating: number; content: string }) => Promise<void>;
   onDelete?: (reviewId: number) => Promise<void>;
 }
 
-export default function ReviewItem({ review, currentUserId, onLike, onDelete }: ReviewItemProps) {
+export default function ReviewItem({ review, currentUserId, onLike, onUpdate, onDelete }: ReviewItemProps) {
   const [isLiking, setIsLiking] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [editRating, setEditRating] = useState(review.attributes.rating);
+  const [editContent, setEditContent] = useState(review.attributes.content);
 
   const likesCount = review.attributes.likedBy.data.length;
   const isLiked = currentUserId
@@ -36,6 +42,39 @@ export default function ReviewItem({ review, currentUserId, onLike, onDelete }: 
     }
   };
 
+  const handleEditClick = () => {
+    setIsEditing(true);
+    setEditRating(review.attributes.rating);
+    setEditContent(review.attributes.content);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditRating(review.attributes.rating);
+    setEditContent(review.attributes.content);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!onUpdate) return;
+    if (editContent.length < 10) {
+      alert('리뷰는 최소 10자 이상 작성해주세요.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await onUpdate(review.id, {
+        rating: editRating,
+        content: editContent,
+      });
+      setIsEditing(false);
+    } catch (error) {
+      alert('리뷰 수정에 실패했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleDeleteClick = async () => {
     if (!onDelete) return;
     if (!confirm('리뷰를 삭제하시겠습니까?')) return;
@@ -49,6 +88,49 @@ export default function ReviewItem({ review, currentUserId, onLike, onDelete }: 
     }
   };
 
+  if (isEditing) {
+    // Edit Mode
+    return (
+      <div className="border-2 border-blue-500 rounded-lg p-4 bg-blue-50">
+        <div className="mb-4">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">별점</label>
+          <StarRating rating={editRating} interactive onChange={setEditRating} />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">리뷰 내용</label>
+          <textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            rows={5}
+            minLength={10}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            placeholder="리뷰 내용 (최소 10자)"
+          />
+          <p className="text-xs text-gray-500 mt-1">{editContent.length}자</p>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={handleSaveEdit}
+            disabled={isSaving || editContent.length < 10}
+            className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          >
+            {isSaving ? '저장 중...' : '저장'}
+          </button>
+          <button
+            onClick={handleCancelEdit}
+            disabled={isSaving}
+            className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-300 disabled:opacity-50 transition-colors"
+          >
+            취소
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Normal Display Mode
   return (
     <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-3">
@@ -73,14 +155,26 @@ export default function ReviewItem({ review, currentUserId, onLike, onDelete }: 
               day: 'numeric',
             })}
           </p>
-          {isOwnReview && onDelete && (
-            <button
-              onClick={handleDeleteClick}
-              disabled={isDeleting}
-              className="text-xs text-red-600 hover:text-red-700 mt-1 disabled:opacity-50"
-            >
-              {isDeleting ? '삭제 중...' : '삭제'}
-            </button>
+          {isOwnReview && (
+            <div className="flex gap-2 mt-1">
+              {onUpdate && (
+                <button
+                  onClick={handleEditClick}
+                  className="text-xs text-blue-600 hover:text-blue-700"
+                >
+                  수정
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={handleDeleteClick}
+                  disabled={isDeleting}
+                  className="text-xs text-red-600 hover:text-red-700 disabled:opacity-50"
+                >
+                  {isDeleting ? '삭제 중...' : '삭제'}
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
