@@ -213,7 +213,7 @@ export async function getReviewsByItinerary(itineraryId: number, sort: string = 
   return fetchAPI(`/reviews?filters[itinerary][id][$eq]=${itineraryId}&populate=user,likedBy&sort=${sort}`);
 }
 
-export async function createReview(token: string, data: { rating: number; content: string; itinerary: number }): Promise<StrapiResponse<StrapiData<Review>>> {
+export async function createReview(token: string, data: { rating: number; content: string; itinerary: number; user: number }): Promise<StrapiResponse<StrapiData<Review>>> {
   return fetchAPI('/reviews', {
     method: 'POST',
     headers: {

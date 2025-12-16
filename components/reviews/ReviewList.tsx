@@ -64,7 +64,6 @@ export default function ReviewList({ itineraryId }: ReviewListProps) {
       await createReview(token, {
         ...data,
         itinerary: itineraryId,
-        user: user.id,
       });
       await fetchReviews();
     } catch (error) {
