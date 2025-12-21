@@ -24,3 +24,26 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Heart floating animation - 물방울처럼 위로 올라감 */
+@keyframes heart-burst {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(0.8) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--heart-x), var(--heart-y)) scale(0.5) rotate(var(--heart-rotation));
+    opacity: 0;
+  }
+}
+
+.animate-heart-burst {
+  animation: heart-burst 1000ms ease-out forwards;
+  animation-delay: var(--heart-delay);
+}

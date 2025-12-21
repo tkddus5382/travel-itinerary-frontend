@@ -6,6 +6,11 @@ export interface User {
   email: string;
   confirmed: boolean;
   blocked: boolean;
+  profileImage?: {
+    id: number;
+    url: string;
+    formats?: any;
+  } | null;
 }
 
 export interface AuthResponse {
@@ -144,4 +149,82 @@ export function removeUser(): void {
 export function logout(): void {
   removeToken();
   removeUser();
+}
+
+/**
+ * 비밀번호 재설정 이메일 요청
+ */
+export async function forgotPassword(email: string): Promise<void> {
+  const response = await fetch(`${API_URL}/auth/forgot-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || '비밀번호 재설정 이메일 발송에 실패했습니다.');
+  }
+}
+
+/**
+ * 비밀번호 재설정
+ */
+export async function resetPassword(
+  code: string,
+  password: string,
+  passwordConfirmation: string
+): Promise<void> {
+  const response = await fetch(`${API_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      code,
+      password,
+      passwordConfirmation,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || '비밀번호 재설정에 실패했습니다.');
+  }
+}
+
+/**
+ * 프로필 업데이트 (사용자명 및 프로필 이미지)
+ */
+export async function updateProfile(
+  token: string,
+  data: { username?: string; profileImage?: File }
+): Promise<User> {
+  const formData = new FormData();
+
+  if (data.username) {
+    formData.append('username', data.username);
+  }
+
+  if (data.profileImage) {
+    formData.append('profileImage', data.profileImage);
+  }
+
+  const response = await fetch(`${API_URL}/auth/profile`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || '프로필 업데이트에 실패했습니다.');
+  }
+
+  const result = await response.json();
+  return result.user;
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import StarRating from './StarRating';
 import { StrapiData, Review } from '@/lib/strapi';
+import LikeAnimation from './LikeAnimation';
 
 interface ReviewItemProps {
   review: StrapiData<Review>;
@@ -17,6 +18,7 @@ export default function ReviewItem({ review, currentUserId, onLike, onUpdate, on
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [animationTrigger, setAnimationTrigger] = useState(0);
 
   const [editRating, setEditRating] = useState(review.attributes.rating);
   const [editContent, setEditContent] = useState(review.attributes.content);
@@ -37,6 +39,9 @@ export default function ReviewItem({ review, currentUserId, onLike, onUpdate, on
     setIsLiking(true);
     try {
       await onLike(review.id, isLiked);
+      if (!isLiked) {
+        setAnimationTrigger(prev => prev + 1);
+      }
     } finally {
       setIsLiking(false);
     }
@@ -185,12 +190,13 @@ export default function ReviewItem({ review, currentUserId, onLike, onUpdate, on
         <button
           onClick={handleLikeClick}
           disabled={isLiking}
-          className={`flex items-center gap-1.5 text-sm transition-colors ${
+          className={`relative flex items-center gap-1.5 text-sm transition-colors ${
             isLiked
               ? 'text-red-600 font-semibold'
               : 'text-gray-600 hover:text-red-600'
           } disabled:opacity-50`}
         >
+          <LikeAnimation trigger={animationTrigger} />
           <span className="text-lg">{isLiked ? '❤️' : '🤍'}</span>
           <span>추천 {likesCount}</span>
         </button>
