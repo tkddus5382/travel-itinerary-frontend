@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Avatar, getAvatars, selectAvatar, redeemEventCode } from '@/lib/auth';
+import { Avatar, getAvatars, selectAvatar } from '@/lib/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL;
 
@@ -38,9 +38,6 @@ export default function AvatarSelectionModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selecting, setSelecting] = useState(false);
-  const [showCodeInput, setShowCodeInput] = useState(false);
-  const [eventCode, setEventCode] = useState('');
-  const [redeeming, setRedeeming] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -75,27 +72,6 @@ export default function AvatarSelectionModal({
     }
   };
 
-  const handleRedeemCode = async () => {
-    if (!eventCode.trim()) {
-      setError('코드를 입력해주세요.');
-      return;
-    }
-
-    setRedeeming(true);
-    setError('');
-    try {
-      await redeemEventCode(token, eventCode.trim());
-      setEventCode('');
-      setShowCodeInput(false);
-      await fetchAvatars();
-      alert('아바타를 획득했습니다!');
-    } catch (err: any) {
-      setError(err.message || '코드 입력에 실패했습니다.');
-    } finally {
-      setRedeeming(false);
-    }
-  };
-
   const getAvatarImageUrl = (avatar: Avatar) => {
     const url = avatar.image?.url;
     if (!url) return '';
@@ -110,46 +86,15 @@ export default function AvatarSelectionModal({
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-white">아바타 선택</h2>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowCodeInput(!showCodeInput)}
-              className="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-lg font-semibold transition-colors"
-            >
-              코드 입력
-            </button>
-            <button
-              onClick={onClose}
-              className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-
-        {/* Event Code Input */}
-        {showCodeInput && (
-          <div className="px-6 py-4 bg-blue-50 border-b border-blue-200">
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={eventCode}
-                onChange={(e) => setEventCode(e.target.value.toUpperCase())}
-                placeholder="이벤트 코드 입력"
-                className="flex-1 px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                disabled={redeeming}
-              />
-              <button
-                onClick={handleRedeemCode}
-                disabled={redeeming}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                {redeeming ? '확인 중...' : '입력'}
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Error Message */}
         {error && (

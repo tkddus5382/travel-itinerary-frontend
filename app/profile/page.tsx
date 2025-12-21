@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AvatarSelectionModal from '@/components/AvatarSelectionModal';
+import { redeemEventCode } from '@/lib/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL;
 
@@ -13,9 +14,24 @@ export default function ProfilePage() {
   const router = useRouter();
   const [showAvatarModal, setShowAvatarModal] = useState(false);
 
+  // Nickname editing
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [username, setUsername] = useState('');
+  const [savingUsername, setSavingUsername] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
+
+  // Event code
+  const [eventCode, setEventCode] = useState('');
+  const [redeemingCode, setRedeemingCode] = useState(false);
+  const [codeError, setCodeError] = useState('');
+  const [codeSuccess, setCodeSuccess] = useState('');
+
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
+    }
+    if (user) {
+      setUsername(user.username);
     }
   }, [user, loading, router]);
 
@@ -27,6 +43,70 @@ export default function ProfilePage() {
 
   const handleAvatarSelected = async () => {
     await refreshUser();
+  };
+
+  const handleSaveUsername = async () => {
+    if (!token || !username.trim()) return;
+
+    if (username === user?.username) {
+      setIsEditingUsername(false);
+      return;
+    }
+
+    setSavingUsername(true);
+    setUsernameError('');
+
+    try {
+      const response = await fetch(`${API_URL}/api/users/${user?.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ username }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || '닉네임 변경에 실패했습니다.');
+      }
+
+      await refreshUser();
+      setIsEditingUsername(false);
+    } catch (err: any) {
+      setUsernameError(err.message || '닉네임 변경에 실패했습니다.');
+    } finally {
+      setSavingUsername(false);
+    }
+  };
+
+  const handleCancelUsername = () => {
+    setUsername(user?.username || '');
+    setIsEditingUsername(false);
+    setUsernameError('');
+  };
+
+  const handleRedeemCode = async () => {
+    if (!token || !eventCode.trim()) {
+      setCodeError('코드를 입력해주세요.');
+      return;
+    }
+
+    setRedeemingCode(true);
+    setCodeError('');
+    setCodeSuccess('');
+
+    try {
+      const avatar = await redeemEventCode(token, eventCode.trim());
+      setCodeSuccess(`${avatar.name} 아바타를 획득했습니다!`);
+      setEventCode('');
+      setTimeout(() => setCodeSuccess(''), 3000);
+      await refreshUser();
+    } catch (err: any) {
+      setCodeError(err.message || '코드 입력에 실패했습니다.');
+    } finally {
+      setRedeemingCode(false);
+    }
   };
 
   if (loading) {
@@ -45,7 +125,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto space-y-6">
         {/* Profile Card */}
         <div className="bg-white rounded-xl shadow-md p-8">
           <div className="flex items-center gap-6 mb-8">
@@ -72,8 +152,51 @@ export default function ProfilePage() {
               </button>
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{user.username}</h1>
-              <p className="text-gray-600">{user.email}</p>
+              {isEditingUsername ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="text-2xl font-bold text-gray-900 border-b-2 border-blue-500 focus:outline-none w-full"
+                    placeholder="사용자명"
+                    disabled={savingUsername}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveUsername}
+                      disabled={savingUsername}
+                      className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50"
+                    >
+                      {savingUsername ? '저장 중...' : '저장'}
+                    </button>
+                    <button
+                      onClick={handleCancelUsername}
+                      disabled={savingUsername}
+                      className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300 disabled:opacity-50"
+                    >
+                      취소
+                    </button>
+                  </div>
+                  {usernameError && (
+                    <p className="text-sm text-red-600">{usernameError}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <h1 className="text-3xl font-bold text-gray-900">{user.username}</h1>
+                  <button
+                    onClick={() => setIsEditingUsername(true)}
+                    className="text-blue-600 hover:text-blue-700 p-1"
+                    title="닉네임 수정"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+              <p className="text-gray-600 mt-2">{user.email}</p>
               {user.selectedAvatar && (
                 <p className="text-sm text-blue-600 mt-1">
                   {user.selectedAvatar.name}
@@ -115,8 +238,43 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Event Code Section */}
+        <div className="bg-white rounded-xl shadow-md p-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">이벤트 코드 입력</h2>
+          <p className="text-gray-600 text-sm mb-4">
+            특별 아바타를 획득할 수 있는 이벤트 코드를 입력하세요.
+          </p>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={eventCode}
+              onChange={(e) => setEventCode(e.target.value.toUpperCase())}
+              placeholder="코드 입력 (예: SUMMER2024)"
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={redeemingCode}
+            />
+            <button
+              onClick={handleRedeemCode}
+              disabled={redeemingCode || !eventCode.trim()}
+              className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {redeemingCode ? '확인 중...' : '입력'}
+            </button>
+          </div>
+          {codeError && (
+            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{codeError}</p>
+            </div>
+          )}
+          {codeSuccess && (
+            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-600">{codeSuccess}</p>
+            </div>
+          )}
+        </div>
+
         {/* My Reviews Section (Future Enhancement) */}
-        <div className="mt-6 bg-white rounded-xl shadow-md p-8">
+        <div className="bg-white rounded-xl shadow-md p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">내가 작성한 리뷰</h2>
           <p className="text-gray-600 text-center py-8">
             곧 출시될 기능입니다!
