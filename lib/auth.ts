@@ -1,16 +1,27 @@
 const API_URL = process.env.NEXT_PUBLIC_STRAPI_API_URL;
 
+export interface Avatar {
+  id: number;
+  name: string;
+  image: {
+    id: number;
+    url: string;
+    formats?: any;
+  };
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  description?: string;
+  unlockType: 'default' | 'mission' | 'event' | 'special';
+  unlockCondition?: any;
+  isUnlocked?: boolean;
+}
+
 export interface User {
   id: number;
   username: string;
   email: string;
   confirmed: boolean;
   blocked: boolean;
-  profileImage?: {
-    id: number;
-    url: string;
-    formats?: any;
-  } | null;
+  selectedAvatar?: Avatar | null;
 }
 
 export interface AuthResponse {
@@ -196,35 +207,60 @@ export async function resetPassword(
 }
 
 /**
- * 프로필 업데이트 (사용자명 및 프로필 이미지)
+ * Get available avatars with unlock status
  */
-export async function updateProfile(
-  token: string,
-  data: { username?: string; profileImage?: File }
-): Promise<User> {
-  const formData = new FormData();
-
-  if (data.username) {
-    formData.append('username', data.username);
-  }
-
-  if (data.profileImage) {
-    formData.append('profileImage', data.profileImage);
-  }
-
-  const response = await fetch(`${API_URL}/auth/profile`, {
-    method: 'PUT',
+export async function getAvatars(token: string): Promise<Avatar[]> {
+  const response = await fetch(`${API_URL}/avatars/available`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
-    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to get avatars');
+  }
+
+  const result = await response.json();
+  return result.data;
+}
+
+/**
+ * Select an avatar
+ */
+export async function selectAvatar(token: string, avatarId: number): Promise<void> {
+  const response = await fetch(`${API_URL}/avatars/select`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ avatarId }),
   });
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error?.message || '프로필 업데이트에 실패했습니다.');
+    throw new Error(error.error?.message || 'Failed to select avatar');
+  }
+}
+
+/**
+ * Redeem an event code
+ */
+export async function redeemEventCode(token: string, code: string): Promise<Avatar> {
+  const response = await fetch(`${API_URL}/event-codes/redeem`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ code }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || 'Failed to redeem code');
   }
 
   const result = await response.json();
-  return result.user;
+  return result.avatar;
 }
