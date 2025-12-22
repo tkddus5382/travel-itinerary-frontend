@@ -26,6 +26,10 @@ export default function ProfilePage() {
   const [codeError, setCodeError] = useState('');
   const [codeSuccess, setCodeSuccess] = useState('');
 
+  // Reviews
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
@@ -35,10 +39,64 @@ export default function ProfilePage() {
     }
   }, [user, loading, router]);
 
+  useEffect(() => {
+    if (user && token) {
+      fetchReviews();
+    }
+  }, [user, token]);
+
+  const fetchReviews = async () => {
+    if (!token) return;
+
+    setReviewsLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/reviews/my`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setReviews(data.data || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch reviews:', error);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
   const getAvatarImageUrl = () => {
     if (!user?.selectedAvatar?.image?.url) return null;
     const url = user.selectedAvatar.image.url;
     return url.startsWith('http') ? url : `${API_URL}${url}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const renderStars = (rating: number) => {
+    return (
+      <div className="flex gap-0.5">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <svg
+            key={star}
+            className={`w-4 h-4 ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+          </svg>
+        ))}
+      </div>
+    );
   };
 
   const handleAvatarSelected = async () => {
@@ -273,12 +331,62 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* My Reviews Section (Future Enhancement) */}
+        {/* My Reviews Section */}
         <div className="bg-white rounded-xl shadow-md p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">내가 작성한 리뷰</h2>
-          <p className="text-gray-600 text-center py-8">
-            곧 출시될 기능입니다!
-          </p>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">내가 작성한 리뷰</h2>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                총 {reviews.length}개
+              </span>
+            </div>
+          </div>
+
+          {reviewsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : reviews.length === 0 ? (
+            <div className="text-center py-12">
+              <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <p className="text-gray-600 mb-2">아직 작성한 리뷰가 없습니다.</p>
+              <p className="text-sm text-gray-500">여행 일정을 둘러보고 첫 리뷰를 남겨보세요!</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {reviews.map((review) => (
+                <div key={review.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <Link
+                        href={`/itinerary/${review.itinerary?.id}`}
+                        className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                      >
+                        {review.itinerary?.title || '제목 없음'}
+                      </Link>
+                      <div className="flex items-center gap-3 mt-2">
+                        {renderStars(review.rating)}
+                        <span className="text-sm text-gray-500">
+                          {formatDate(review.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                      </svg>
+                      <span className="font-medium">{review.likeCount}</span>
+                    </div>
+                  </div>
+                  <p className="text-gray-700 whitespace-pre-wrap line-clamp-3">
+                    {review.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
