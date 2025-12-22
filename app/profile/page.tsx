@@ -360,12 +360,18 @@ export default function ProfilePage() {
                 <div key={review.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <Link
-                        href={`/itinerary/${review.itinerary?.id}`}
-                        className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                      >
-                        {review.itinerary?.title || '제목 없음'}
-                      </Link>
+                      {review.itinerary?.slug && review.itinerary?.city?.slug && review.itinerary?.city?.country?.slug ? (
+                        <Link
+                          href={`/${review.itinerary.city.country.slug}/${review.itinerary.city.slug}/${review.itinerary.slug}`}
+                          className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                        >
+                          {review.itinerary?.title || '제목 없음'}
+                        </Link>
+                      ) : (
+                        <span className="text-lg font-semibold text-gray-900">
+                          {review.itinerary?.title || '제목 없음'}
+                        </span>
+                      )}
                       <div className="flex items-center gap-3 mt-2">
                         {renderStars(review.rating)}
                         <span className="text-sm text-gray-500">
