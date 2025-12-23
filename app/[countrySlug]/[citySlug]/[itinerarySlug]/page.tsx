@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getItineraryBySlug, getStrapiMediaUrl } from '@/lib/strapi';
 import ReviewList from '@/components/reviews/ReviewList';
+import ItineraryMapView from '@/components/itinerary/ItineraryMapView';
 
 interface ItineraryPageProps {
   params: Promise<{
@@ -82,7 +83,7 @@ export default async function ItineraryPage({ params }: ItineraryPageProps) {
 
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-4">
-                {tags.map((tag) => (
+                {tags.map((tag: any) => (
                   <span
                     key={tag.id}
                     className="px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700"
@@ -112,50 +113,8 @@ export default async function ItineraryPage({ params }: ItineraryPageProps) {
           </div>
         )}
 
-        {/* Places */}
-        {places.length > 0 && (
-          <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">일정별 장소</h2>
-            <div className="space-y-4">
-              {places
-                .sort((a, b) => {
-                  if (a.attributes.dayNumber !== b.attributes.dayNumber) {
-                    return a.attributes.dayNumber - b.attributes.dayNumber;
-                  }
-                  return a.attributes.order - b.attributes.order;
-                })
-                .map((place) => (
-                  <div
-                    key={place.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0">
-                        <span className="inline-flex items-center justify-center w-12 h-12 bg-blue-600 text-white rounded-full font-bold">
-                          Day {place.attributes.dayNumber}
-                        </span>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-900 mb-1">
-                          {place.attributes.name}
-                        </h3>
-                        {place.attributes.timeSlot && (
-                          <p className="text-sm text-gray-600 mb-2">
-                            ⏰ {place.attributes.timeSlot}
-                          </p>
-                        )}
-                        {place.attributes.description && (
-                          <p className="text-gray-700 leading-relaxed">
-                            {place.attributes.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
+        {/* Day by Day Itinerary with Maps */}
+        {places.length > 0 && <ItineraryMapView places={places} />}
 
         {/* Reviews */}
         <ReviewList itineraryId={itinerary.id} />
